@@ -1,10 +1,7 @@
-# Daily NightClaw Review
+# Daily Nightscout Review
 
 Task:
-Run yesterday's NightClaw diabetes data review and produce a concise, evidence-backed Markdown report.
-
-Repository root:
-`<NIGHTCLAW_REPOSITORY_ROOT>`
+Run yesterday's Nightscout diabetes data review and produce a concise, evidence-backed Markdown report.
 
 Timezone:
 `Europe/Warsaw`
@@ -16,16 +13,27 @@ Use the previous full local calendar day.
 - `date_end` = today at `00:00:00` in `Europe/Warsaw`
 - `report_date` = yesterday's local date as `YYYY-MM-DD`
 
-Create this output directory:
+Output location:
+Save all generated report files under the Hermes root directory (`.hermes`) reports folder, using paths relative to that root:
 
 ```bash
 reports/daily/<report_date>
 ```
 
+Create this output directory from the Hermes root directory:
+
+```bash
+mkdir -p reports/daily/<report_date>
+```
+
 Collect data:
 
 ```bash
-cd <NIGHTCLAW_REPOSITORY_ROOT>
+# Run from the Hermes root directory (`.hermes`).
+REPORT_DIR="reports/daily/<report_date>"
+mkdir -p "$REPORT_DIR"
+
+cd skills
 
 uv run nightscout_skills/query_nightscout_context/cli.py \
   --mode context \
@@ -33,12 +41,12 @@ uv run nightscout_skills/query_nightscout_context/cli.py \
   --date-end "<TODAY_START_ISO>" \
   --question "Daily review of glucose, treatments, insulin, basal, carbs, Loop context, diet and exercise-relevant patterns." \
   --detail standard \
-  --output "reports/daily/<report_date>/agent_context.json"
+  --output "../$REPORT_DIR/agent_context.json"
 
 uv run nightscout_skills/build_treatment_context/cli.py \
   --date-start "<YESTERDAY_START_ISO>" \
   --date-end "<TODAY_START_ISO>" \
-  --output "reports/daily/<report_date>/insulin_overview.json"
+  --output "../$REPORT_DIR/insulin_overview.json"
 ```
 
 If either command fails, stop and write a short failure report to:

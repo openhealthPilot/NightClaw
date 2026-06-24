@@ -44,7 +44,7 @@ def build_temp_basal_events(raw_treatments: list[RawTreatment], tz_name: str | N
 
 
 def temp_basal_at(temp_events: list[TempBasalEvent], when: datetime) -> float | None:
-    for event in temp_events:
+    for event in reversed(temp_events):
         if event.start <= when < event.end:
             return event.rate
     return None

@@ -1,5 +1,5 @@
 from nightscout_skills.build_treatment_context.processor import preprocess_treatments
-from nightscout_skills.utils.insulin import calculate_basal, extract_treatment_events
+from nightscout_skills.utils.insulin import build_temp_basal_events, calculate_basal, extract_treatment_events, temp_basal_at
 from nightscout_skills.utils.models import ProfileSnapshot, RawProfileEntry, RawTreatment, RawTreatmentWindow
 from nightscout_skills.utils.time import parse_iso
 
@@ -91,3 +91,42 @@ def test_extract_treatment_events_uses_inclusive_start_exclusive_end():
     )
 
     assert [event.amount for event in events] == [10, 15]
+
+
+def test_temp_basal_at_uses_most_recent_overlapping_temp_basal():
+    events = build_temp_basal_events(
+        [
+            RawTreatment(eventType="Temp Basal", timestamp="2026-02-08T00:00:00+00:00", rate=0.0, duration=120),
+            RawTreatment(eventType="Temp Basal", timestamp="2026-02-08T00:30:00+00:00", rate=2.0, duration=30),
+        ]
+    )
+
+    assert temp_basal_at(events, parse_iso("2026-02-08T00:45:00+00:00")) == 2.0
+
+
+def test_basal_calculation_treats_overlapping_temp_basals_as_replacements():
+    temp_events = build_temp_basal_events(
+        [
+            RawTreatment(eventType="Temp Basal", timestamp="2026-02-08T20:30:00+00:00", rate=1.5, duration=60),
+            RawTreatment(eventType="Temp Basal", timestamp="2026-02-08T21:00:00+00:00", rate=1.0, duration=30),
+        ]
+    )
+
+    total = calculate_basal(
+        parse_iso("2026-02-08T20:30:00+00:00"),
+        parse_iso("2026-02-08T21:30:00+00:00"),
+        [
+            ProfileSnapshot(
+                start_date=parse_iso("2026-02-01T00:00:00+00:00"),
+                profile_name="default",
+                timezone="UTC",
+                dia=6,
+                basal=[{"time": "00:00", "value": 0.0}],
+                carbratio=[],
+                sens=[],
+            )
+        ],
+        temp_events,
+    )
+
+    assert round(total, 2) == 1.25
